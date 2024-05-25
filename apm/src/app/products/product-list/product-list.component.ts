@@ -4,6 +4,7 @@ import { NgIf, NgFor, NgClass, AsyncPipe } from '@angular/common';
 import { ProductDetailComponent } from '../product-detail/product-detail.component';
 import { ProductService } from '../product.service';
 import { EMPTY, catchError, tap } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'pm-product-list',
@@ -13,18 +14,12 @@ import { EMPTY, catchError, tap } from 'rxjs';
 })
 export class ProductListComponent {
   pageTitle = 'Products';
-  errorMessage = '';
 
   private productService = inject(ProductService);
 
   // Products
-  readonly products$ = this.productService.products$
-  .pipe(
-    catchError(err => {
-      this.errorMessage = err;
-      return EMPTY;
-    })
-  );
+  products = this.productService.products;
+  errorMessage = this.productService.productsError;
 
   // Selected product id to highlight the entry
   readonly selectedProductId$ = this.productService.productSelected$;
