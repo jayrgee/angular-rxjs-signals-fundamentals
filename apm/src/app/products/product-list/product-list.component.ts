@@ -22,7 +22,7 @@ export class ProductListComponent {
   errorMessage = this.productService.productsError;
 
   // Selected product id to highlight the entry
-  readonly selectedProductId$ = this.productService.productSelected$;
+  readonly selectedProductId = this.productService.selectedProductId;
 
   onSelected(productId: number): void {
     // this.selectedProductId = productId;

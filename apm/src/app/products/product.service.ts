@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, combineLatest, filter, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 import { Product, Result } from './product';
 import { HttpErrorService } from '../utilities/http-error.service';
@@ -19,6 +19,7 @@ export class ProductService {
 
   private productSelectedSubject = new BehaviorSubject<number | undefined>(undefined);
   readonly productSelected$ = this.productSelectedSubject.asObservable();
+  selectedProductId = signal<number | undefined>(undefined);
 
   private productsResult$ = this.http.get<Product[]>(this.productsUrl)
   .pipe(
@@ -35,20 +36,6 @@ export class ProductService {
   products = computed(() => this.productsResult().data);
   productsError = computed(() => this.productsResult().error);
   
-  // private products$ = this.http.get<Product[]>(this.productsUrl)
-  // .pipe(
-  //   tap(p => console.log(JSON.stringify(p))),
-  //   shareReplay(1),
-  //   catchError(err => this.handleError(err))
-  // );
-  // products = computed(() => {
-  //   try {
-  //     return toSignal(this.products$, { initialValue: [] as Product[] } )()
-  //   } catch (error) {
-  //     return [] as Product[];
-  //   }
-  // });
-
   readonly product$ = this.productSelected$
     .pipe(
       filter(Boolean),
@@ -76,6 +63,7 @@ export class ProductService {
 
   productSelected(selectedProductId: number): void {
     this.productSelectedSubject.next(selectedProductId);
+    this.selectedProductId.set(selectedProductId);
   }
 
   private getProductWithReviews(product: Product): Observable<Product> {
