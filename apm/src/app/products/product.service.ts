@@ -34,7 +34,15 @@ export class ProductService {
   products = computed(() => this.productsResult().data);
   productsError = computed(() => this.productsResult().error);
   
-  private productResult$ = toObservable(this.selectedProductId)
+  // products = computed(() => {
+  //   try {
+  //     return toSignal(this.products$, { initialValue: [] as Product[] })();
+  //   } catch (error) {
+  //     return [] as Product[];
+  //   }
+  // });
+
+  private productResult1$ = toObservable(this.selectedProductId)
     .pipe(
       filter(Boolean),
       switchMap(id => {
@@ -50,22 +58,34 @@ export class ProductService {
       }),
       map(data => ({data} as Result<Product>))
     );
-  private productResult = toSignal(this.productResult$); // why no initial data?
+
+  // Find the product in the existing array of products
+  private foundProduct = computed(() => {
+    // Dependent signals
+    const p = this.products();
+    const id = this.selectedProductId();
+    if (p && id) {
+      return p.find(product => product.id === id);
+    }
+    return undefined;
+  })
+
+  // Get the related set of reviews
+  private productResult$ = toObservable(this.foundProduct)
+    .pipe(
+      filter(Boolean),
+      switchMap(product => this.getProductWithReviews(product)),
+      map(p => ({ data: p } as Result<Product>)),
+      catchError(err => of({
+        data: undefined,
+        error: this.errorService.formatError(err)
+      } as Result<Product>))
+    );
+
+  private productResult = toSignal(this.productResult$);
   product = computed(() => this.productResult()?.data);
   productError = computed(() => this.productResult()?.error);
   
-  // product$ = combineLatest([
-  //   this.productSelected$,
-  //   this.products$
-  // ]).pipe(
-  //   map(([selectedProductId, products]) =>
-  //     products.find(product => product.id === selectedProductId)
-  //    ),
-  //   filter(Boolean),
-  //   switchMap(product => this.getProductWithReviews(product)),
-  //   catchError(err => this.handleError(err))
-  // )
-
   productSelected(selectedProductId: number): void {
     this.selectedProductId.set(selectedProductId);
   }
@@ -79,10 +99,5 @@ export class ProductService {
     } else {
       return of(product)
     }
-  }
-
-  private handleError(err: HttpErrorResponse): Observable<never> {
-    const formattedMessage = this.errorService.formatError(err);
-    return throwError(() => formattedMessage);
   }
 }
