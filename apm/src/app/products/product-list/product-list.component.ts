@@ -3,8 +3,6 @@ import { Component, inject } from '@angular/core';
 import { NgIf, NgFor, NgClass, AsyncPipe } from '@angular/common';
 import { ProductDetailComponent } from '../product-detail/product-detail.component';
 import { ProductService } from '../product.service';
-import { EMPTY, catchError, tap } from 'rxjs';
-import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'pm-product-list',

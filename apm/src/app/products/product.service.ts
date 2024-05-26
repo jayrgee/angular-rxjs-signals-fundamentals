@@ -1,11 +1,11 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, combineLatest, filter, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
+import { Observable, catchError, filter, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 import { Product, Result } from './product';
 import { HttpErrorService } from '../utilities/http-error.service';
 import { ReviewService } from '../reviews/review.service';
 import { Review } from '../reviews/review';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 
 @Injectable({
   providedIn: 'root'
@@ -17,8 +17,6 @@ export class ProductService {
   private errorService = inject(HttpErrorService);
   private reviewService = inject(ReviewService);
 
-  private productSelectedSubject = new BehaviorSubject<number | undefined>(undefined);
-  readonly productSelected$ = this.productSelectedSubject.asObservable();
   selectedProductId = signal<number | undefined>(undefined);
 
   private productsResult$ = this.http.get<Product[]>(this.productsUrl)
@@ -36,7 +34,7 @@ export class ProductService {
   products = computed(() => this.productsResult().data);
   productsError = computed(() => this.productsResult().error);
   
-  readonly product$ = this.productSelected$
+  private productResult$ = toObservable(this.selectedProductId)
     .pipe(
       filter(Boolean),
       switchMap(id => {
@@ -44,11 +42,18 @@ export class ProductService {
         return this.http.get<Product>(productUrl)
           .pipe(
             switchMap(product => this.getProductWithReviews(product)),
-            catchError(err => this.handleError(err))
+            catchError(err => of({
+              data: undefined,
+              error: this.errorService.formatError(err)
+            } as Result<Product>))
           );
-      })
+      }),
+      map(data => ({data} as Result<Product>))
     );
-
+  private productResult = toSignal(this.productResult$); // why no initial data?
+  product = computed(() => this.productResult()?.data);
+  productError = computed(() => this.productResult()?.error);
+  
   // product$ = combineLatest([
   //   this.productSelected$,
   //   this.products$
@@ -62,7 +67,6 @@ export class ProductService {
   // )
 
   productSelected(selectedProductId: number): void {
-    this.productSelectedSubject.next(selectedProductId);
     this.selectedProductId.set(selectedProductId);
   }
 
